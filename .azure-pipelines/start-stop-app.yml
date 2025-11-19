@@ -4,6 +4,7 @@ variables:
   azureServiceConnection: "MyAzureConnection"   # replace with your service connection name
   resourceGroup: "myDevRG"             # replace with your App Service resource group
   appName: "mySuperWebApp"                  # replace with your App Service name
+  ACTION: "stop"   # or "start"
 
 pool:
   vmImage: ubuntu-latest
