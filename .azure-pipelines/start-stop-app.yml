@@ -1,0 +1,43 @@
+trigger: none
+
+variables:
+  azureServiceConnection: "MyAzureConnection"   # replace with your service connection name
+  resourceGroup: "myDevRG"             # replace with your App Service resource group
+  appName: "mySuperWebApp"                  # replace with your App Service name
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: AzureCLI@2
+  displayName: "Start/Stop App Service"
+  inputs:
+    azureSubscription: $(azureServiceConnection)
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      STATUS=$(az webapp show --resource-group $(resourceGroup) --name $(appName) --query state -o tsv)
+      echo "Current App Service state: $STATUS"
+
+      ACTION="${ACTION:-none}"
+      echo "ACTION = $ACTION"
+
+      if [[ "$ACTION" == "start" ]]; then
+        if [[ "$STATUS" == "Running" ]]; then
+          echo "🔵 App Service already running."
+        else
+          echo "🟢 Starting App Service..."
+          az webapp start --resource-group $(resourceGroup) --name $(appName)
+          echo "✅ App Service started."
+        fi
+      elif [[ "$ACTION" == "stop" ]]; then
+        if [[ "$STATUS" == "Stopped" ]]; then
+          echo "🔴 App Service already stopped."
+        else
+          echo "🟡 Stopping App Service..."
+          az webapp stop --resource-group $(resourceGroup) --name $(appName)
+          echo "✅ App Service stopped."
+        fi
+      else
+        echo "No ACTION defined."
+      fi
