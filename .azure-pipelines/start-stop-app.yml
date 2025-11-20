@@ -1,17 +1,25 @@
 trigger: none
 
+schedules:
+- cron: "0 12 * * *"  # 7 AM Toronto time = 12 PM UTC
+  displayName: Start App Service Daily
+  branches:
+    include:
+      - main
+  always: true
+
 variables:
-  azureServiceConnection: "MyAzureConnection"   # replace with your service connection name
-  resourceGroup: "myDevRG"             # replace with your App Service resource group
-  appName: "mySuperWebApp"                  # replace with your App Service name
-  ACTION: "stop"   # or "start"
+  azureServiceConnection: "MyAzureConnection"
+  resourceGroup: "myDevRG"
+  appName: "mySuperWebApp"
+  ACTION: "start"
 
 pool:
   vmImage: ubuntu-latest
 
 steps:
 - task: AzureCLI@2
-  displayName: "Start/Stop App Service"
+  displayName: "Start App Service"
   inputs:
     azureSubscription: $(azureServiceConnection)
     scriptType: bash
@@ -20,25 +28,50 @@ steps:
       STATUS=$(az webapp show --resource-group $(resourceGroup) --name $(appName) --query state -o tsv)
       echo "Current App Service state: $STATUS"
 
-      ACTION="${ACTION:-none}"
-      echo "ACTION = $ACTION"
-
-      if [[ "$ACTION" == "start" ]]; then
-        if [[ "$STATUS" == "Running" ]]; then
-          echo "🔵 App Service already running."
-        else
-          echo "🟢 Starting App Service..."
-          az webapp start --resource-group $(resourceGroup) --name $(appName)
-          echo "✅ App Service started."
-        fi
-      elif [[ "$ACTION" == "stop" ]]; then
-        if [[ "$STATUS" == "Stopped" ]]; then
-          echo "🔴 App Service already stopped."
-        else
-          echo "🟡 Stopping App Service..."
-          az webapp stop --resource-group $(resourceGroup) --name $(appName)
-          echo "✅ App Service stopped."
-        fi
+      if [[ "$STATUS" == "Running" ]]; then
+        echo "🔵 App Service already running."
       else
-        echo "No ACTION defined."
+        echo "🟢 Starting App Service..."
+        az webapp start --resource-group $(resourceGroup) --name $(appName)
+        echo "✅ App Service started."
+      fi
+B. Stop App Service Pipeline (stop-app.yml)
+yaml
+Copy code
+trigger: none
+
+schedules:
+- cron: "0 3 * * *"  # 10 PM Toronto time = 3 AM UTC
+  displayName: Stop App Service Daily
+  branches:
+    include:
+      - main
+  always: true
+
+variables:
+  azureServiceConnection: "MyAzureConnection"
+  resourceGroup: "myDevRG"
+  appName: "mySuperWebApp"
+  ACTION: "stop"
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: AzureCLI@2
+  displayName: "Stop App Service"
+  inputs:
+    azureSubscription: $(azureServiceConnection)
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      STATUS=$(az webapp show --resource-group $(resourceGroup) --name $(appName) --query state -o tsv)
+      echo "Current App Service state: $STATUS"
+
+      if [[ "$STATUS" == "Stopped" ]]; then
+        echo "🔴 App Service already stopped."
+      else
+        echo "🟡 Stopping App Service..."
+        az webapp stop --resource-group $(resourceGroup) --name $(appName)
+        echo "✅ App Service stopped."
       fi
